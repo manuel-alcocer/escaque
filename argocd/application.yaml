@@ -10,7 +10,10 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'git@github.com:manuel-alcocer/escaque.git'
+    # HTTPS, not SSH: the repo is public, so ArgoCD clones it anonymously and
+    # there is no per-repo deploy key to register (unlike tides/linuxarena,
+    # which are private and each carry their own repository Secret).
+    repoURL: 'https://github.com/manuel-alcocer/escaque.git'
     targetRevision: main
     path: deploy/k8s
   destination:
