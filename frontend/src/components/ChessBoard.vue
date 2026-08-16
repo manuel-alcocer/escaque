@@ -135,7 +135,22 @@ onBeforeUnmount(() => {
 
 watch(
   () => [props.fen, props.orientation, props.interactive, props.lastMove, props.highlight],
-  () => board?.set(config()),
+  (now, before) => {
+    if (!board) return
+    board.set(config())
+
+    // Chessground binds the board's pointer listeners inside redrawAll(), and
+    // bails out early when the board is viewOnly. Its set() calls redrawAll()
+    // for an orientation change *before* applying the rest of the config, so a
+    // board that was viewOnly and is now interactive gets redrawn while still
+    // marked viewOnly and ends up with no listeners at all — silently dead.
+    //
+    // This is the exercise runner's normal flow: an exercise ends (viewOnly),
+    // and the next one arrives interactive and often from the other side.
+    // Redrawing once more, after the new config is in, rebinds them.
+    const becameInteractive = now[2] && !before?.[2]
+    if (becameInteractive) board.redrawAll()
+  },
   { deep: true },
 )
 

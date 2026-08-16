@@ -21,3 +21,6 @@ npm-debug.log*
 .idea/
 .vscode/
 *.swp
+
+# e2e
+e2e/node_modules/
