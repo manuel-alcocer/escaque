@@ -1,0 +1,105 @@
+/* Board theme.
+ *
+ * Chessground ships brown and green themes; neither belongs to this palette, so
+ * the squares are painted here from the same tokens as the rest of the app. The
+ * piece sprites are cburnett, embedded as data URIs by the package itself, so
+ * nothing is fetched at runtime.
+ */
+
+@import 'chessground/assets/chessground.base.css';
+@import 'chessground/assets/chessground.cburnett.css';
+
+.cg-wrap {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: block;
+}
+
+/* The checkerboard is one 2x2-square SVG tile repeated four times each way.
+ * Colours are baked into the tile because a data URI cannot read custom
+ * properties; they are the same two values as --square-light/--square-dark.
+ * Light square top-left, so a8 is light as it should be. */
+cg-board {
+  background-color: var(--square-light);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 2' shape-rendering='crispEdges'%3E%3Crect width='2' height='2' fill='%23d9cbb3'/%3E%3Crect x='1' width='1' height='1' fill='%237d6448'/%3E%3Crect y='1' width='1' height='1' fill='%237d6448'/%3E%3C/svg%3E");
+  background-size: 25% 25%;
+  background-repeat: repeat;
+}
+
+/* Last move, selection and check, in the app's own accent rather than the
+ * default lichess green. */
+cg-board square.last-move {
+  background-color: var(--square-move);
+}
+
+cg-board square.selected {
+  background-color: rgba(201, 146, 47, 0.55);
+}
+
+cg-board square.check {
+  background: radial-gradient(
+    ellipse at center,
+    var(--square-check) 0%,
+    rgba(192, 95, 74, 0.35) 45%,
+    rgba(192, 95, 74, 0) 75%
+  );
+}
+
+cg-board square.move-dest {
+  background: radial-gradient(
+    rgba(20, 16, 14, 0.45) 19%,
+    rgba(0, 0, 0, 0) 20%
+  );
+}
+
+cg-board square.oc.move-dest {
+  background: radial-gradient(
+    transparent 0%,
+    transparent 79%,
+    rgba(20, 16, 14, 0.45) 80%
+  );
+}
+
+/* Squares highlighted by a theory diagram. Brass outline, no fill, so the
+ * pieces stay readable underneath. */
+cg-board square.highlight-square {
+  box-shadow: inset 0 0 0 3px var(--brass);
+}
+
+/* --- Board frame --------------------------------------------------------- */
+
+.board-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--ink-900);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  /* Stops the browser from scrolling the page when a piece is dragged. */
+  touch-action: none;
+}
+
+.board-frame--flat {
+  border: 0;
+  border-radius: 0;
+}
+
+/* Coordinates in the score-sheet face, tucked into the corners of the edge
+ * squares so they never sit on top of a piece. */
+.board-coords {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: clamp(0.45rem, 1.4vw, 0.5625rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.board-coords span {
+  position: absolute;
+  color: rgba(28, 22, 19, 0.5);
+  mix-blend-mode: luminosity;
+}

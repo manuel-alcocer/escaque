@@ -1,0 +1,23 @@
+namespace: escaque
+
+resources:
+  - namespace.yml
+  - configmap.yml
+  - secrets.yml
+  - db-init-job.yml
+  - stockfish.yml
+  - backend.yml
+  - frontend.yml
+  - migrate-job.yml
+
+# Bumped by CI (.github/workflows/release.yml) on every push to main: it builds
+# the three multi-arch images, rewrites the `newTag`s below and commits them back
+# ([skip ci]). ArgoCD watches main and redeploys when they change — no manual
+# `kubectl rollout restart`. All three share the same tag.
+images:
+  - name: ghcr.io/manuel-alcocer/escaque-backend
+    newTag: latest
+  - name: ghcr.io/manuel-alcocer/escaque-frontend
+    newTag: latest
+  - name: ghcr.io/manuel-alcocer/escaque-stockfish
+    newTag: latest

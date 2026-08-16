@@ -1,0 +1,91 @@
+# The public entry point. cloudflared is pointed at this Service from the
+# Cloudflare Zero Trust dashboard:
+#
+#   escaque.linuxarena.net -> http://escaque-frontend.escaque.svc.cluster.local:80
+#
+# nginx inside the pod serves the built Vue app and proxies /api, /admin and
+# /static to the backend, so the browser only ever sees one origin and there is
+# no CORS in production.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: escaque-frontend
+  namespace: escaque
+  labels:
+    app.kubernetes.io/name: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: frontend
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: frontend
+          image: ghcr.io/manuel-alcocer/escaque-frontend:latest
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: BACKEND_URL
+              value: http://escaque-backend:8000
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ['ALL']
+          # nginx needs these writable; the rest of the image stays read-only.
+          volumeMounts:
+            - name: cache
+              mountPath: /var/cache/nginx
+            - name: run
+              mountPath: /var/run
+      volumes:
+        - name: cache
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: frontend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: escaque-frontend
+  namespace: escaque
+spec:
+  selector:
+    app.kubernetes.io/name: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

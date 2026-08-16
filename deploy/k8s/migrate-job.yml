@@ -1,0 +1,60 @@
+# Migrations and content load, as a PostSync hook so it runs after the database
+# exists and the new image is already the one ArgoCD just rolled out.
+#
+# `seed_curriculum` is idempotent (variations keyed by slug, exercises by
+# reference), so re-running it on every sync updates the theory in place and
+# never touches user progress.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: escaque-migrate
+  namespace: escaque
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: ghcr.io/manuel-alcocer/escaque-backend:latest
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              python manage.py migrate --noinput
+              python manage.py seed_curriculum
+          envFrom:
+            - configMapRef:
+                name: escaque-config
+            - secretRef:
+                name: escaque-django
+            - secretRef:
+                name: escaque-db
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: '1'
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

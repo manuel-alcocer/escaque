@@ -1,0 +1,26 @@
+# ArgoCD Application for Escaque. It lives in the app's OWN repo; the
+# app-of-apps entry in k8s-home-apps (deployments/escaque.yml) points ArgoCD at
+# this directory, so syncing the parent creates this Application, which then
+# deploys deploy/k8s.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: escaque
+  namespace: argo
+spec:
+  project: default
+  source:
+    repoURL: 'git@github.com:manuel-alcocer/escaque.git'
+    targetRevision: main
+    path: deploy/k8s
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: escaque
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - SkipDryRunOnMissingResource=true

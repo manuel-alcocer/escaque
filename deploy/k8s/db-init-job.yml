@@ -1,0 +1,60 @@
+# Creates the escaque role and database on the cluster's shared PostgreSQL.
+# Runs as a Sync hook before the workloads, and is idempotent: re-syncing just
+# re-asserts the password.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: escaque-db-init
+  namespace: escaque
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: create-db
+          image: postgres:17
+          env:
+            - name: PGHOST
+              value: postgresql.databases.svc.cluster.local
+            - name: PGPORT
+              value: "5432"
+            - name: PGUSER
+              value: postgres
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-auth-shared
+                  key: postgres-password
+            - name: APP_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: escaque-db
+                  key: POSTGRES_PASSWORD
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              until pg_isready -h "$PGHOST" -p "$PGPORT"; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+              psql -v ON_ERROR_STOP=1 <<SQL
+              DO \$\$ BEGIN
+                IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'escaque') THEN
+                  CREATE ROLE escaque WITH LOGIN PASSWORD '${APP_DB_PASSWORD}';
+                ELSE
+                  ALTER ROLE escaque WITH PASSWORD '${APP_DB_PASSWORD}';
+                END IF;
+              END \$\$;
+              SQL
+              psql -tAc "SELECT 1 FROM pg_database WHERE datname='escaque'" | grep -q 1 || \
+                psql -c "CREATE DATABASE escaque OWNER escaque"
+              psql -c "GRANT ALL PRIVILEGES ON DATABASE escaque TO escaque;"
+              echo "escaque database ready"

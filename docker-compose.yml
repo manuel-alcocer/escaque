@@ -1,0 +1,65 @@
+# Local development stack. Production runs on Kubernetes; see k8s/.
+#
+#   docker compose up --build
+#   docker compose exec backend python manage.py migrate
+#   docker compose exec backend python manage.py seed_curriculum
+#   docker compose exec backend python manage.py createuser <nombre>
+#
+# Then open http://localhost:8080
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: escaque
+      POSTGRES_USER: escaque
+      POSTGRES_PASSWORD: escaque
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U escaque -d escaque']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # The engine runs beside the app, exactly as it does in the cluster.
+  stockfish:
+    build: ./docker/stockfish
+    image: escaque/stockfish:local
+    expose:
+      - '23249'
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    image: escaque/backend:local
+    environment:
+      DEBUG: 'True'
+      SECRET_KEY: dev-only-insecure-key-change-me
+      DATABASE_URL: postgres://escaque:escaque@db:5432/escaque
+      ALLOWED_HOSTS: '*'
+      CORS_ALLOWED_ORIGINS: http://localhost:8080,http://localhost:5173
+      STOCKFISH_HOST: stockfish
+      STOCKFISH_PORT: '23249'
+    depends_on:
+      db:
+        condition: service_healthy
+      stockfish:
+        condition: service_started
+    expose:
+      - '8000'
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    image: escaque/frontend:local
+    environment:
+      BACKEND_URL: http://backend:8000
+    ports:
+      - '8080:80'
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  db-data:
