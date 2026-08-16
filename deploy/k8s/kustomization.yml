@@ -16,8 +16,8 @@ resources:
 # `kubectl rollout restart`. All three share the same tag.
 images:
   - name: ghcr.io/manuel-alcocer/escaque-backend
-    newTag: main-5bb34b9cb4a34aa082b1ffdd0c9e3f83274b7cac
+    newTag: main-11b6540ad91a95fca9c5c2eac17626705b6c7dc2
   - name: ghcr.io/manuel-alcocer/escaque-frontend
-    newTag: main-5bb34b9cb4a34aa082b1ffdd0c9e3f83274b7cac
+    newTag: main-11b6540ad91a95fca9c5c2eac17626705b6c7dc2
   - name: ghcr.io/manuel-alcocer/escaque-stockfish
-    newTag: main-5bb34b9cb4a34aa082b1ffdd0c9e3f83274b7cac
+    newTag: main-11b6540ad91a95fca9c5c2eac17626705b6c7dc2
