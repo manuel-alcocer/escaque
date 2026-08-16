@@ -58,17 +58,11 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ['ALL']
-          # nginx needs these writable; the rest of the image stays read-only.
-          volumeMounts:
-            - name: cache
-              mountPath: /var/cache/nginx
-            - name: run
-              mountPath: /var/run
-      volumes:
-        - name: cache
-          emptyDir: {}
-        - name: run
-          emptyDir: {}
+          # No emptyDir over /var/cache/nginx: the image already ships that
+          # directory owned by the nginx user, and mounting over it hands nginx
+          # a root-owned mountpoint it then tries to chown — which fails,
+          # because dropping ALL capabilities takes CAP_CHOWN with it. The
+          # filesystem is not read-only here, so nginx writes to its own paths.
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
