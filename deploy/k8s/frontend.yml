@@ -24,6 +24,9 @@ spec:
         app.kubernetes.io/name: frontend
     spec:
       securityContext:
+        # nginx-unprivileged's own uid; it binds 8080 and needs no capabilities.
+        runAsNonRoot: true
+        runAsUser: 101
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -31,7 +34,7 @@ spec:
           image: ghcr.io/manuel-alcocer/escaque-frontend:latest
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 8080
           env:
             - name: BACKEND_URL
               value: http://escaque-backend:8000
@@ -58,11 +61,6 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ['ALL']
-          # No emptyDir over /var/cache/nginx: the image already ships that
-          # directory owned by the nginx user, and mounting over it hands nginx
-          # a root-owned mountpoint it then tries to chown — which fails,
-          # because dropping ALL capabilities takes CAP_CHOWN with it. The
-          # filesystem is not read-only here, so nginx writes to its own paths.
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname

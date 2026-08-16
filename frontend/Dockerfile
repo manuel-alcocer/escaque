@@ -9,7 +9,11 @@ RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npm run build
 
-FROM nginx:1.29-alpine AS runtime
+# The unprivileged variant: it already runs as uid 101 and listens on 8080, so
+# the container needs no capabilities at all. The stock nginx image starts as
+# root and chowns its cache directories, which fails under a `drop: [ALL]`
+# securityContext.
+FROM nginxinc/nginx-unprivileged:1.29-alpine AS runtime
 
 # BACKEND_URL is substituted into the config at container start, so the same
 # image works in compose and in the cluster.
@@ -18,4 +22,4 @@ ENV BACKEND_URL=http://backend:8000
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 
-EXPOSE 80
+EXPOSE 8080
