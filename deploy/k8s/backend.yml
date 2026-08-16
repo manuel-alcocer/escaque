@@ -45,16 +45,26 @@ spec:
             limits:
               cpu: '1'
               memory: 512Mi
+          # The kubelet probes the pod IP, and Django rejects an unknown Host
+          # with 400 (DisallowedHost) — which would fail the liveness probe and
+          # restart the pod forever. Pod IPs are dynamic, so they cannot go in
+          # ALLOWED_HOSTS; sending an allowed Host header is the fix.
           readinessProbe:
             httpGet:
               path: /healthz
               port: http
+              httpHeaders:
+                - name: Host
+                  value: escaque-backend
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /healthz
               port: http
+              httpHeaders:
+                - name: Host
+                  value: escaque-backend
             initialDelaySeconds: 20
             periodSeconds: 30
           securityContext:
